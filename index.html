@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="style.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="supabase.js"></script>
-    <script type="module" src="https://sclass0614.github.io/authCheck/authCheck.js"></script>
+    <!-- <script type="module" src="https://sclass0614.github.io/authCheck/authCheck.js"></script> -->
   </head>
 
   <body>
@@ -140,12 +140,6 @@
               <button id="btn-journal-search">
                 <i class="fas fa-sync-alt"></i> 업데이트
               </button>
-              <input
-                type="text"
-                id="employeeFilter"
-                placeholder="직원번호필터링"
-                onkeyup="filterJournalAndPlanByEmployee()"
-              />
             </div>
           </div>
         </div>
@@ -408,15 +402,11 @@
         }
       }
 
-      function makeTable_journal() {
-          filterJournalByEmployee();
-      }
+
 
       async function journalSearch() {
         const date = document.getElementById('datePickerPage2').value;
         const dateYmd = changeDate(date);
-        
-        document.getElementById('employeeFilter').value = '';
         
         if (dateYmd) {
           await getPlanAll_id(dateYmd);
@@ -839,8 +829,6 @@
 
 
         document.getElementById('btn-journal-search').addEventListener('click', async function() {
-            document.getElementById('employeeFilter').value = '';
-            
             const currentDate = changeDate(document.getElementById("datePickerPage2").value);
             if (currentDate) {
                 await getPlanAll_id(currentDate);
@@ -1119,186 +1107,9 @@
           rows.forEach(row => tbody.appendChild(row));
       }
 
-      function filterJournalByEmployee() {
-          const employeeFilter = document.getElementById('employeeFilter').value.trim();
-          
-          const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
-          if (!selectedDate) {
-              return;
-          }
-          
-          const tableBody = document.getElementById('journal-table-body');
-          tableBody.innerHTML = '';
-          
-          let filteredJournals = dailyjournalAll;
-          
-          if (employeeFilter !== '') {
-              filteredJournals = filteredJournals.filter((journal) => {
-                  return String(journal.직원번호 || '').includes(employeeFilter) || 
-                         String(journal.직원명 || '').toLowerCase().includes(employeeFilter.toLowerCase());
-              });
-          }
-          
-          if (filteredJournals.length === 0) {
-              const row = document.createElement('tr');
-              const cell = document.createElement('td');
-              cell.colSpan = 12;
-              cell.textContent = employeeFilter ? 
-                                '해당 직원의 일지 데이터가 없습니다.' : 
-                                '해당 날짜의 일지 데이터가 없습니다.';
-              cell.style.textAlign = 'center';
-              cell.style.padding = '10px';
-              row.appendChild(cell);
-              tableBody.appendChild(row);
-              return;
-          }
-          
-          filteredJournals.sort((a, b) => {
-              const startTimeA = String(a.시작시간 || '').padStart(4, '0');
-              const startTimeB = String(b.시작시간 || '').padStart(4, '0');
-              const timeA = timeToNumber(startTimeA);
-              const timeB = timeToNumber(startTimeB);
-              const timeCompare = timeA - timeB;
-              
-              if (timeCompare === 0) {
-                  const managerA = String(a.직원명 || '');
-                  const managerB = String(b.직원명 || '');
-                  return managerA.localeCompare(managerB);
-              }
-              
-              return timeCompare;
-          });
-          
-          filteredJournals.forEach(journal => {
-              const row = document.createElement('tr');
-              
-              const columns = ['날짜', '시작시간', '종료시간', '직원명', '활동명', '코드', '회원번호', '회원명', '참여도', '수행도', '만족도', '관찰사항'];
-              
-              columns.forEach(key => {
-                  const cell = document.createElement('td');
-                  if (key === '날짜') {
-                      cell.textContent = journal[key] || '';
-                  } else if (key === '시작시간' || key === '종료시간') {
-                      cell.textContent = String(journal[key] || '').padStart(4, '0');
-                  } else {
-                      cell.textContent = journal[key] || '';
-                  }
-                  row.appendChild(cell);
-              });
-              
-              row.addEventListener('dblclick', () => {
-                  resetAllFields();
-                  document.getElementById('journalID').value = journal.일지_id || '';
-                  document.getElementById('journalDate').value = journal.날짜 || '';
-                  document.getElementById('journalStartTime').value = String(journal.시작시간 || '').padStart(4, '0');
-                  document.getElementById('journalEndTime').value = String(journal.종료시간 || '').padStart(4, '0');
-                  document.getElementById('journalEmployeeNumber').value = journal.직원번호 || '';
-                  document.getElementById('journalManager').value = journal.직원명 || '';
-                  document.getElementById('journalActivityName').value = journal.활동명 || '';
-                  document.getElementById('journalCode').value = journal.코드 || '';
-                  document.getElementById('journalMemberNumber').value = journal.회원번호 || '';
-                  document.getElementById('journalName').value = journal.회원명 || '';
-                  document.getElementById('journalParticipation').value = journal.참여도 || '5';
-                  document.getElementById('journalPerformance').value = journal.수행도 || '5';
-                  document.getElementById('journalSatisfaction').value = journal.만족도 || '5';
-                  document.getElementById('journalObservations').value = journal.관찰사항 || '';
-                  
-                  updateButtonStates(false, true, true);
-              });
-              
-              tableBody.appendChild(row);
-          });
-      }
-      
-      function filterJournalAndPlanByEmployee() {
-          filterJournalByEmployee();
-          
-          filterPlanByEmployee();
-      }
 
-      document.getElementById('employeeFilter').addEventListener('keyup', filterJournalAndPlanByEmployee);
       
-      function filterPlanByEmployee() {
-          const employeeFilter = document.getElementById('employeeFilter').value.trim();
-          
-          const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
-          if (!selectedDate) {
-              return;
-          }
-          
-          const tableBody = document.getElementById('plan-table-body');
-          tableBody.innerHTML = '';
-          
-          let filteredPlans = dailyPlanAll;
-          
-          if (employeeFilter !== '') {
-              filteredPlans = filteredPlans.filter((plan) => {
-                  return String(plan.직원번호 || '').includes(employeeFilter) || 
-                         String(plan.직원명 || '').toLowerCase().includes(employeeFilter.toLowerCase());
-              });
-          }
-          
-          if (filteredPlans.length === 0) {
-              const row = document.createElement('tr');
-              const cell = document.createElement('td');
-              cell.colSpan = 6;
-              cell.textContent = employeeFilter ? 
-                                 '해당 직원의 계획 데이터가 없습니다.' : 
-                                 '해당 날짜의 계획 데이터가 없습니다.';
-              cell.style.textAlign = 'center';
-              cell.style.padding = '10px';
-              row.appendChild(cell);
-              tableBody.appendChild(row);
-              return;
-          }
-          
-          filteredPlans.sort((a, b) => {
-              const startTimeA = String(a.시작시간 || '').padStart(4, '0');
-              const startTimeB = String(b.시작시간 || '').padStart(4, '0');
-              const timeA = timeToNumber(startTimeA);
-              const timeB = timeToNumber(startTimeB);
-              const timeCompare = timeA - timeB;
-              
-              if (timeCompare === 0) {
-                  const managerA = String(a.직원명 || '');
-                  const managerB = String(b.직원명 || '');
-                  return managerA.localeCompare(managerB);
-              }
-              
-              return timeCompare;
-          });
-          
-          filteredPlans.forEach(plan => {
-              const row = document.createElement('tr');
-              
-              const columns = ['날짜', '시작시간', '종료시간', '직원명', '활동명', '생활영역'];
-              
-              columns.forEach(key => {
-                  const cell = document.createElement('td');
-                  if (key === '날짜') {
-                      cell.textContent = plan[key] || '';
-                  } else if (key === '시작시간' || key === '종료시간') {
-                      cell.textContent = String(plan[key] || '').padStart(4, '0');
-                  } else {
-                      cell.textContent = plan[key] || '';
-                  }
-                  row.appendChild(cell);
-              });
-              
-              row.addEventListener('dblclick', () => {
-                  resetAllFields();
-                  document.getElementById('journalDate').value = plan.날짜 || '';
-                  document.getElementById('journalStartTime').value = String(plan.시작시간 || '').padStart(4, '0');
-                  document.getElementById('journalEndTime').value = String(plan.종료시간 || '').padStart(4, '0');
-                  document.getElementById('journalEmployeeNumber').value = plan.직원번호 || '';
-                  document.getElementById('journalManager').value = plan.직원명 || '';
-                  document.getElementById('journalActivityName').value = plan.활동명 || '';
-                  document.getElementById('journalCode').value = plan.생활영역 || '';
-              });
-              
-              tableBody.appendChild(row);
-          });
-      }
+
     </script>
   </body>
 </html>
