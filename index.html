@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>우리집 DayCareCenter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="supabase.js"></script>
+    <!-- <script type="module" src="https://sclass0614.github.io/authCheck/authCheck.js"></script> -->
+  </head>
+
+  <body>
+    <div id="loadingOverlay">
+      <div class="loader"></div>
+      <div>데이터를 처리중입니다...</div>
+    </div>
+
+    <header>
+      <h1>
+        <i class="fas fa-home header-icon"></i>
+        우리집 DayCareCenter
+      </h1>
+    </header>
+
+    <div id="customAlertModal" class="custom-alert">
+      <div class="custom-alert-content">
+        <div class="custom-alert-header">
+          <i class="fas fa-info-circle"></i>
+          <span>알림</span>
+          <button class="close-alert">&times;</button>
+        </div>
+        <div class="custom-alert-body">
+          <p id="alertMessage"></p>
+            </div>
+        <div class="custom-alert-footer">
+          <button class="alert-confirm-btn" onclick="closeCustomAlert()">
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="customConfirmModal" class="custom-alert">
+      <div class="custom-alert-content">
+        <div class="custom-alert-header confirm-header">
+          <i class="fas fa-question-circle"></i>
+          <span>확인</span>
+          <button class="close-alert" onclick="closeCustomConfirm(false)">&times;</button>
+        </div>
+        <div class="custom-alert-body">
+          <p id="confirmMessage"></p>
+          </div>
+        <div class="custom-alert-footer">
+          <button class="alert-cancel-btn" onclick="closeCustomConfirm(false)">
+            취소
+          </button>
+          <button class="alert-confirm-btn confirm-btn" onclick="closeCustomConfirm(true)">
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="memberSelectModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>회원 선택</h3>
+          <span class="close-member-modal">&times;</span>
+        </div>
+        <input
+          type="text"
+          id="memberSearchBox"
+          class="search-box"
+          placeholder="회원 검색 (이름 또는 회원번호)..."
+        />
+        <div class="table-container modal-table-container">
+          <table class="list-table" id="member-list-table">
+            <thead>
+              <tr>
+                <th>회원번호</th>
+                <th>회원명</th>
+              </tr>
+            </thead>
+            <tbody id="member-list-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="staffSelectModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>직원명 선택</h3>
+          <span class="close-staff-modal">&times;</span>
+        </div>
+        <input
+          type="text"
+          id="staffSearchBox"
+          class="search-box"
+          placeholder="직원명 검색 (이름 또는 직원번호)..."
+        />
+        <div class="table-container modal-table-container">
+          <table class="list-table" id="staff-list-table">
+            <thead>
+              <tr>
+                <th>직원번호</th>
+                <th>이름</th>
+              </tr>
+            </thead>
+            <tbody id="staff-list-body">
+            </tbody>
+          </table>
+        </div>
+        <div class="button-container">
+          <button id="resetManagerBtn">
+            초기화
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <section class="page active" id="page2">
+        <div class="header-container">
+          <h2>Journal Report 일괄입력</h2>
+          <div class="date-search-container">
+            <input
+              type="date"
+              id="datePickerPage2"
+              onchange="journalSearch()"
+            />
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button id="btn-journal-search">
+                <i class="fas fa-sync-alt"></i> 업데이트
+              </button>
+              <input
+                type="text"
+                id="employeeFilter"
+                placeholder="직원번호필터링"
+                onkeyup="filterJournalAndPlanByEmployee()"
+              />
+            </div>
+          </div>
+        </div>
+
+
+
+        <div class="three-panel">
+          <div class="panel" id="daily-plan-container">
+            <h3>Daily Plan</h3>
+            <div class="table-container plan-table-container">
+              <table id="daily-plan-summary-table">
+                <thead>
+                  <tr>
+                    <th onclick="sortPlanSummaryTable(0)">날짜</th>
+                    <th onclick="sortPlanSummaryTable(1)">시작시간</th>
+                    <th onclick="sortPlanSummaryTable(2)">종료시간</th>
+                    <th onclick="sortPlanSummaryTable(3)">직원명</th>
+                    <th onclick="sortPlanSummaryTable(4)">활동명</th>
+                    <th onclick="sortPlanSummaryTable(5)">소분류코드</th>
+                  </tr>
+                </thead>
+                <tbody id="plan-table-body">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel" id="plan-to-journal-container">
+            <h3>Multi Member Journal Entry</h3>
+            
+            <!-- 숨김 필드들 (기존 코드 호환성) -->
+            <div style="display: none;">
+              <input type="text" id="journalDate" />
+              <input type="text" id="journalID" />
+              <input type="text" id="journalStartTime" />
+              <input type="text" id="journalEndTime" />
+              <input type="text" id="journalManager" />
+              <input type="hidden" id="journalEmployeeNumber" />
+              <input type="text" id="journalActivityName" />
+              <input type="text" id="journalCode" />
+              <input type="text" id="journalMemberNumber" />
+              <input type="text" id="journalName" />
+              <input type="number" id="journalParticipation" min="0" max="5" value="5" />
+              <input type="number" id="journalPerformance" min="0" max="5" value="5" />
+              <input type="number" id="journalSatisfaction" min="0" max="5" value="5" />
+              <textarea id="journalObservations" rows="1"></textarea>
+            </div>
+
+            <!-- 공통 정보 입력 -->
+            <div class="common-info-section">
+              <div class="row-2col">
+                <div class="col-2">
+                  <label>날짜</label>
+                  <input type="text" id="multiJournalDate" placeholder="우측상단 날짜 선택 후 조회" readonly />
+                </div>
+                <div class="col-2">
+                  <label>시작시간</label>
+                  <input type="text" id="multiJournalStartTime" placeholder="시간 입력... ex)0920" />
+                </div>
+              </div>
+              <div class="row-2col">
+                <div class="col-2">
+                  <label>종료시간</label>
+                  <input type="text" id="multiJournalEndTime" placeholder="시간 입력... ex)1800" />
+                </div>
+                <div class="col-2">
+                  <label>직원명</label>
+                  <input type="text" id="multiJournalManager" placeholder="직원명 입력..." />
+                  <input type="hidden" id="multiJournalEmployeeNumber" />
+                </div>
+              </div>
+              <div class="row-2col">
+                <div class="col-2">
+                  <label>활동명</label>
+                  <input type="text" id="multiJournalActivityName" placeholder="활동명 입력..." />
+                </div>
+                <div class="col-2">
+                  <label>소분류코드</label>
+                  <input type="text" id="multiJournalCode" placeholder="소분류코드 입력..." />
+                </div>
+              </div>
+            </div>
+
+            <!-- 회원별 정보 입력 -->
+            <div class="member-journal-section">
+              <div class="member-journal-header">
+                <h4>회원별 일지 정보</h4>
+                <button id="btn-toggle-all-members" onclick="toggleAllMembers()">전체선택</button>
+              </div>
+              <div class="member-journal-container" id="memberJournalContainer">
+                <!-- 여기에 회원 목록이 동적으로 생성됩니다 -->
+              </div>
+            </div>
+
+
+          </div>
+          </div>
+
+        <div class="bottom-buttons">
+              <button
+            id="btn-journal-save-new"
+              >
+            일괄저장
+              </button>
+          </div>
+      </section>
+    </main>
+    <script>
+      let dailyPlanAll = [];
+      let dailyjournalAll = [];
+      let memberall = [];
+
+      async function getPlanAllPromise(date = null) {
+          return await getPlanAll(date);
+      }
+
+      async function getJournalAllPromise(date = null) {
+          return await getJournalAll(date);
+      }
+
+      async function getMembersPromise() {
+          return await getAllMembers();
+      }
+
+      async function initialize() {
+          showLoading();
+          
+          try {
+              memberall = await getMembersPromise();
+          } catch (error) {
+              showCustomAlert("데이터를 불러오는데 실패했습니다: " + error);
+          } finally {
+              hideLoading();
+          }
+      }
+
+      async function getPlanAll_id(date = null) {
+          showLoading();
+          try {
+              dailyPlanAll = await getPlanAllPromise(date);
+              makeTable_plan();
+          } catch (error) {
+              showCustomAlert("데이터를 불러오는데 실패했습니다: " + error);
+          } finally {
+              hideLoading();
+          }
+      }
+
+      async function getJournalAll_id(date = null) {
+          showLoading();
+          try {
+              dailyjournalAll = await getJournalAllPromise(date);
+              makeTable_journal();
+              return true;
+          } catch (error) {
+              showCustomAlert("일지 데이터를 불러오는데 실패했습니다: " + error);
+              return false;
+          } finally {
+              hideLoading();
+          }
+      }
+
+      async function getMember_id() {
+          showLoading();
+          try {
+              memberall = await getMembersPromise();
+          } catch (error) {
+              showCustomAlert("회원 데이터를 불러오는데 실패했습니다: " + error);
+          } finally {
+              hideLoading();
+          }
+      }
+
+      function makeTable_plan() {
+        const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+        
+        const tableBody = document.getElementById('plan-table-body');
+        tableBody.innerHTML = '';
+        
+        if (!selectedDate) {
+          return;
+        }
+        
+        const filteredPlans = dailyPlanAll;
+        
+        if (filteredPlans.length === 0) {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 6;
+          cell.textContent = '해당 날짜의 계획 데이터가 없습니다.';
+          cell.style.textAlign = 'center';
+          cell.style.padding = '10px';
+          row.appendChild(cell);
+          tableBody.appendChild(row);
+          
+          if (document.getElementById("planDate")) {
+            document.getElementById("planDate").value = selectedDate;
+          }
+          return;
+        }
+        
+        filteredPlans.sort((a, b) => {
+          const startTimeA = String(a.시작시간 || '').padStart(4, '0');
+          const startTimeB = String(b.시작시간 || '').padStart(4, '0');
+          const timeA = timeToNumber(startTimeA);
+          const timeB = timeToNumber(startTimeB);
+          const timeCompare = timeA - timeB;
+          
+          if (timeCompare === 0) {
+            const managerA = String(a.직원명 || '');
+            const managerB = String(b.직원명 || '');
+            return managerA.localeCompare(managerB);
+          }
+          
+          return timeCompare;
+        });
+        
+        filteredPlans.forEach(plan => {
+          const row = document.createElement('tr');
+          
+          const columns = ['날짜', '시작시간', '종료시간', '직원명', '활동명', '생활영역'];
+          
+          columns.forEach(key => {
+            const cell = document.createElement('td');
+            if (key === '날짜') {
+              cell.textContent = plan[key] || '';
+            } else if (key === '시작시간' || key === '종료시간') {
+              cell.textContent = String(plan[key] || '').padStart(4, '0');
+            } else {
+              cell.textContent = plan[key] || '';
+            }
+            row.appendChild(cell);
+          });
+          
+          row.addEventListener('dblclick', () => {
+            // Multi Member Journal Entry 필드들에 값 설정
+            document.getElementById('multiJournalDate').value = plan.날짜 || '';
+            document.getElementById('multiJournalStartTime').value = String(plan.시작시간 || '').padStart(4, '0');
+            document.getElementById('multiJournalEndTime').value = String(plan.종료시간 || '').padStart(4, '0');
+            document.getElementById('multiJournalEmployeeNumber').value = plan.직원번호 || '';
+            document.getElementById('multiJournalManager').value = plan.직원명 || '';
+            document.getElementById('multiJournalActivityName').value = plan.활동명 || '';
+            document.getElementById('multiJournalCode').value = plan.생활영역 || '';
+            
+            // 기존 숨겨진 필드들도 호환성을 위해 설정
+            document.getElementById('journalDate').value = plan.날짜 || '';
+            document.getElementById('journalStartTime').value = String(plan.시작시간 || '').padStart(4, '0');
+            document.getElementById('journalEndTime').value = String(plan.종료시간 || '').padStart(4, '0');
+            document.getElementById('journalEmployeeNumber').value = plan.직원번호 || '';
+            document.getElementById('journalManager').value = plan.직원명 || '';
+            document.getElementById('journalActivityName').value = plan.활동명 || '';
+            document.getElementById('journalCode').value = plan.생활영역 || '';
+          });
+          
+          tableBody.appendChild(row);
+        });
+        
+        if (document.getElementById("planDate")) {
+          document.getElementById("planDate").value = selectedDate;
+        }
+      }
+
+      function makeTable_journal() {
+          filterJournalByEmployee();
+      }
+
+      async function journalSearch() {
+        const date = document.getElementById('datePickerPage2').value;
+        const dateYmd = changeDate(date);
+        
+        document.getElementById('employeeFilter').value = '';
+        
+        if (dateYmd) {
+          await getPlanAll_id(dateYmd);
+          // 날짜 변경 시 자동으로 회원 목록 로드
+          loadMembersForDate();
+        }
+      }
+
+      function showLoading() {
+          const loadingOverlay = document.getElementById('loadingOverlay');
+          if (loadingOverlay) {
+              loadingOverlay.style.display = 'flex';
+          }
+      }
+
+      function hideLoading() {
+          const loadingOverlay = document.getElementById('loadingOverlay');
+          if (loadingOverlay) {
+              loadingOverlay.style.display = 'none';
+          }
+      }
+
+      let confirmCallback = null;
+
+      function showCustomAlert(message) {
+          const modal = document.getElementById('customAlertModal');
+          const messageElement = document.getElementById('alertMessage');
+          messageElement.textContent = message;
+          modal.style.display = 'flex';
+      }
+
+      function closeCustomAlert() {
+          const modal = document.getElementById('customAlertModal');
+          modal.style.display = 'none';
+      }
+
+      function showCustomConfirm(message, onConfirm) {
+          const modal = document.getElementById('customConfirmModal');
+          const messageElement = document.getElementById('confirmMessage');
+          messageElement.textContent = message;
+          confirmCallback = onConfirm;
+          modal.style.display = 'flex';
+      }
+
+      function closeCustomConfirm(result) {
+          const modal = document.getElementById('customConfirmModal');
+          modal.style.display = 'none';
+          if (confirmCallback && result) {
+              confirmCallback();
+          }
+          confirmCallback = null;
+      }
+
+
+
+      function disableButtonTemporarily(buttonId, duration = 2000) {
+          const button = document.getElementById(buttonId);
+          if (button) {
+              button.disabled = true;
+              setTimeout(() => {
+                  button.disabled = false;
+              }, duration);
+          }
+      }
+
+      // 다중 회원 일지 입력 관련 함수들
+      function loadMembersForDate() {
+        const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+        if (!selectedDate) {
+          showCustomAlert("날짜를 먼저 선택해주세요.");
+          return;
+        }
+
+        // 공통 정보 날짜 설정
+        document.getElementById('multiJournalDate').value = selectedDate;
+        
+        // 회원 목록 생성
+        generateMemberJournalList(selectedDate);
+      }
+
+      function generateMemberJournalList(selectedDate) {
+        const container = document.getElementById('memberJournalContainer');
+        container.innerHTML = '';
+
+        const filteredMembers = memberall.filter(member => {
+          const admissionDate = member.입소일 || '';
+          const dischargeDate = member.퇴소일 || '99991231';
+          const memberNumber = member.회원번호 || '';
+          
+          if (memberNumber === '상담회원') {
+            return false;
+          }
+          
+          const meetsDateCriteria = (admissionDate === '' || selectedDate >= admissionDate) && 
+                                  (dischargeDate === '' || dischargeDate === '99991231' || selectedDate <= dischargeDate);
+          
+          return meetsDateCriteria;
+        }).sort((a, b) => {
+          // 회원 이름을 오름차순으로 정렬
+          const nameA = (a.회원명 || '').toString();
+          const nameB = (b.회원명 || '').toString();
+          return nameA.localeCompare(nameB);
+        });
+
+        filteredMembers.forEach(member => {
+          const memberRow = createMemberJournalRow(member);
+          container.appendChild(memberRow);
+        });
+
+        // 버튼 텍스트 업데이트
+        updateToggleButtonText();
+      }
+
+      function createMemberJournalRow(member) {
+        const row = document.createElement('div');
+        row.className = 'member-journal-row';
+        row.setAttribute('data-member-number', member.회원번호);
+        row.setAttribute('data-member-name', member.회원명);
+
+        row.innerHTML = `
+          <div class="member-checkbox">
+            <input type="checkbox" class="member-select-checkbox" />
+          </div>
+          <div class="member-info">
+            <div class="member-name">${member.회원명}</div>
+            <div class="member-number">${member.회원번호}</div>
+          </div>
+          <div class="score-inputs">
+            <label>참여도</label>
+            <input type="number" class="participation-score" min="0" max="5" value="5" />
+            <label>수행도</label>
+            <input type="number" class="performance-score" min="0" max="5" value="5" />
+            <label>만족도</label>
+            <input type="number" class="satisfaction-score" min="0" max="5" value="5" />
+          </div>
+          <div class="observation-input">
+            <textarea class="observation-text" placeholder="관찰사항 입력..."></textarea>
+          </div>
+        `;
+
+        // 체크박스 변경 이벤트 리스너 추가
+        const checkbox = row.querySelector('.member-select-checkbox');
+        checkbox.addEventListener('change', updateToggleButtonText);
+
+        return row;
+      }
+
+      function saveAllJournals() {
+        const commonInfo = getCommonJournalInfo();
+        if (!validateCommonInfo(commonInfo)) {
+          return;
+        }
+
+        const memberRows = document.querySelectorAll('.member-journal-row');
+        const journalsToSave = [];
+
+        // 체크된 회원들의 필수 필드 검증
+        let validationError = null;
+        
+        memberRows.forEach(row => {
+          const checkbox = row.querySelector('.member-select-checkbox');
+          
+          // 체크박스가 체크된 경우만 저장
+          if (checkbox.checked) {
+            const memberNumber = row.getAttribute('data-member-number');
+            const memberName = row.getAttribute('data-member-name');
+            const participation = row.querySelector('.participation-score').value;
+            const performance = row.querySelector('.performance-score').value;
+            const satisfaction = row.querySelector('.satisfaction-score').value;
+            const observation = row.querySelector('.observation-text').value;
+
+            // 필수 필드 검증
+            if (!participation || participation.trim() === '') {
+              validationError = `${memberName}(${memberNumber}) 회원의 참여도를 입력해주세요.`;
+              return;
+            }
+            if (!performance || performance.trim() === '') {
+              validationError = `${memberName}(${memberNumber}) 회원의 수행도를 입력해주세요.`;
+              return;
+            }
+            if (!satisfaction || satisfaction.trim() === '') {
+              validationError = `${memberName}(${memberNumber}) 회원의 만족도를 입력해주세요.`;
+              return;
+            }
+            if (!observation || observation.trim() === '') {
+              validationError = `${memberName}(${memberNumber}) 회원의 관찰사항을 입력해주세요.`;
+              return;
+            }
+
+            // 점수 범위 검증 (0-5)
+            const participationNum = parseInt(participation);
+            const performanceNum = parseInt(performance);
+            const satisfactionNum = parseInt(satisfaction);
+
+            if (isNaN(participationNum) || participationNum < 0 || participationNum > 5) {
+              validationError = `${memberName}(${memberNumber}) 회원의 참여도는 0에서 5 사이의 값이어야 합니다.`;
+              return;
+            }
+            if (isNaN(performanceNum) || performanceNum < 0 || performanceNum > 5) {
+              validationError = `${memberName}(${memberNumber}) 회원의 수행도는 0에서 5 사이의 값이어야 합니다.`;
+              return;
+            }
+            if (isNaN(satisfactionNum) || satisfactionNum < 0 || satisfactionNum > 5) {
+              validationError = `${memberName}(${memberNumber}) 회원의 만족도는 0에서 5 사이의 값이어야 합니다.`;
+              return;
+            }
+
+            journalsToSave.push({
+              ...commonInfo,
+              회원번호: memberNumber,
+              회원명: memberName,
+              참여도: participationNum,
+              수행도: performanceNum,
+              만족도: satisfactionNum,
+              관찰사항: observation
+            });
+          }
+        });
+
+        // 검증 오류가 있으면 저장하지 않음
+        if (validationError) {
+          showCustomAlert(validationError);
+          return;
+        }
+
+        if (journalsToSave.length === 0) {
+          showCustomAlert("저장할 일지가 없습니다. 체크박스를 선택한 회원이 있는지 확인해주세요.");
+          return;
+        }
+
+        saveBatchJournals(journalsToSave);
+      }
+
+      function getCommonJournalInfo() {
+        return {
+          날짜: parseInt(document.getElementById('multiJournalDate').value),
+          시작시간: document.getElementById('multiJournalStartTime').value,
+          종료시간: document.getElementById('multiJournalEndTime').value,
+          직원번호: document.getElementById('multiJournalEmployeeNumber').value,
+          직원명: document.getElementById('multiJournalManager').value,
+          활동명: document.getElementById('multiJournalActivityName').value,
+          코드: document.getElementById('multiJournalCode').value
+        };
+      }
+
+      function validateCommonInfo(info) {
+        const requiredFields = [
+          { field: 'multiJournalDate', name: '날짜', value: info.날짜 },
+          { field: 'multiJournalStartTime', name: '시작시간', value: info.시작시간 },
+          { field: 'multiJournalEndTime', name: '종료시간', value: info.종료시간 },
+          { field: 'multiJournalManager', name: '직원명', value: info.직원명 },
+          { field: 'multiJournalActivityName', name: '활동명', value: info.활동명 },
+          { field: 'multiJournalCode', name: '소분류코드', value: info.코드 }
+        ];
+
+        for (const field of requiredFields) {
+          if (!field.value || field.value.toString().trim() === '') {
+            showCustomAlert(`${field.name}을(를) 입력해주세요.`);
+            document.getElementById(field.field).focus();
+            return false;
+          }
+        }
+
+        const timeRegex = /^([0-1][0-9]|2[0-3])[0-5][0-9]$/;
+        const startTime = info.시작시간.padStart(4, '0');
+        const endTime = info.종료시간.padStart(4, '0');
+
+        if (!timeRegex.test(startTime)) {
+          showCustomAlert("시작시간을 올바른 형식(HHMM)으로 입력해주세요.");
+          return false;
+        }
+
+        if (!timeRegex.test(endTime)) {
+          showCustomAlert("종료시간을 올바른 형식(HHMM)으로 입력해주세요.");
+          return false;
+        }
+
+        if (parseInt(startTime) >= parseInt(endTime)) {
+          showCustomAlert("종료시간은 시작시간보다 늦어야 합니다.");
+          return false;
+        }
+
+        return true;
+      }
+
+      async function saveBatchJournals(journals) {
+        showLoading();
+        let successCount = 0;
+        let failCount = 0;
+
+        try {
+          for (const journal of journals) {
+            try {
+              const result = await appendJournal(journal);
+              if (result) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch (error) {
+              failCount++;
+              console.error('일지 저장 오류:', error);
+            }
+          }
+
+          showCustomAlert(`일지 저장 완료: 성공 ${successCount}건, 실패 ${failCount}건`);
+          
+          if (successCount > 0) {
+            // 성공한 경우 체크박스 해제 및 필드 초기화
+            const memberRows = document.querySelectorAll('.member-journal-row');
+            memberRows.forEach(row => {
+              const checkbox = row.querySelector('.member-select-checkbox');
+              if (checkbox.checked) {
+                checkbox.checked = false;
+                row.querySelector('.participation-score').value = '5';
+                row.querySelector('.performance-score').value = '5';
+                row.querySelector('.satisfaction-score').value = '5';
+                row.querySelector('.observation-text').value = '';
+              }
+            });
+            updateToggleButtonText();
+          }
+        } catch (error) {
+          showCustomAlert("일지 저장 중 오류가 발생했습니다: " + error);
+        } finally {
+          hideLoading();
+        }
+      }
+
+
+
+      function showStaffModal() {
+        // 기존 직원 모달 표시 로직 재사용
+        const modal = document.getElementById('staffSelectModal');
+        if (modal) {
+          modal.style.display = "block";
+          document.getElementById('staffSearchBox').focus();
+        }
+      }
+
+      // 전체선택/해제 기능
+      function toggleAllMembers() {
+        const memberRows = document.querySelectorAll('.member-journal-row');
+        const toggleButton = document.getElementById('btn-toggle-all-members');
+        
+        // 현재 선택된 체크박스 개수 확인
+        const checkedBoxes = document.querySelectorAll('.member-select-checkbox:checked');
+        const isAllSelected = checkedBoxes.length === memberRows.length && memberRows.length > 0;
+        
+        // 전체선택/해제 토글
+        memberRows.forEach(row => {
+          const checkbox = row.querySelector('.member-select-checkbox');
+          checkbox.checked = !isAllSelected;
+        });
+        
+        // 버튼 텍스트 업데이트
+        updateToggleButtonText();
+      }
+
+      // 버튼 텍스트 업데이트 함수
+      function updateToggleButtonText() {
+        const memberRows = document.querySelectorAll('.member-journal-row');
+        const checkedBoxes = document.querySelectorAll('.member-select-checkbox:checked');
+        const toggleButton = document.getElementById('btn-toggle-all-members');
+        
+        if (memberRows.length === 0) {
+          toggleButton.textContent = '전체선택';
+          return;
+        }
+        
+        const isAllSelected = checkedBoxes.length === memberRows.length;
+        toggleButton.textContent = isAllSelected ? '전체해제' : '전체선택';
+      }
+
+      document.addEventListener('DOMContentLoaded', async function() {
+        
+        const today = new Date().toISOString().split("T")[0];
+        const todayYmd = changeDate(today);
+        document.getElementById("datePickerPage2").value = today;
+
+
+
+        await initialize();
+        
+        if (todayYmd) {
+          await getPlanAll_id(todayYmd);
+          // 페이지 로딩 시 자동으로 회원 목록 로드
+          loadMembersForDate();
+        }
+        
+        document.getElementById('journalName').addEventListener('click', showMemberModal);
+        
+        document.getElementById('memberSearchBox').addEventListener('input', function() {
+            const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+            updateMemberList(selectedDate);
+        });
+
+        document.querySelector('.close-member-modal').addEventListener('click', closeMemberModal);
+
+        window.addEventListener('click', function(event) {
+            const alertModal = document.getElementById('customAlertModal');
+            const confirmModal = document.getElementById('customConfirmModal');
+            if (event.target === alertModal) {
+                closeCustomAlert();
+            } else if (event.target === confirmModal) {
+                closeCustomConfirm(false);
+            }
+        });
+
+        document.getElementById("btn-journal-save-new").addEventListener("click", async function() {
+            try {
+                // 새로운 다중 회원 저장 기능 사용
+                saveAllJournals();
+            } catch (error) {
+            } finally {
+                disableButtonTemporarily('btn-journal-save-new');
+            }
+        });
+
+
+
+        document.getElementById('btn-journal-search').addEventListener('click', async function() {
+            document.getElementById('employeeFilter').value = '';
+            
+            const currentDate = changeDate(document.getElementById("datePickerPage2").value);
+            if (currentDate) {
+                await getPlanAll_id(currentDate);
+                // 업데이트 버튼 클릭 시 자동으로 회원 목록 로드
+                loadMembersForDate();
+            }
+            
+            await getMember_id();
+        });
+        const tableHeaders = document.querySelectorAll('#daily-journal-table th, #daily-plan-summary-table th');
+        tableHeaders.forEach(header => {
+          header.style.cursor = 'pointer';
+          header.title = '클릭하여 정렬';
+        });
+      });
+
+      function changeDate(dateStr) {
+          if (!dateStr) return '';
+
+          if (typeof dateStr !== 'string') {
+            dateStr = String(dateStr);
+          }
+
+          return dateStr.replace(/-/g, "");
+        }
+        
+      function convertTimeToMinutes(timeStr) {
+          const hours = parseInt(timeStr.substring(0, 2));
+          const minutes = parseInt(timeStr.substring(2, 4));
+          return hours * 60 + minutes;
+      }
+
+      function timeToNumber(timeStr) {
+          if (!timeStr) return 0;
+          return parseInt(timeStr);
+      }
+
+      function formatTime(timeStr) {
+          return `${timeStr.substring(0, 2)}:${timeStr.substring(2, 4)}`;
+      }
+
+      function checkRightTimeAndMemberNum() {
+          const journalDate = document.getElementById("journalDate").value;
+          const startTime = document.getElementById("journalStartTime").value.padStart(4, '0');
+          const endTime = document.getElementById("journalEndTime").value.padStart(4, '0');
+          const memberNumber = document.getElementById("journalMemberNumber").value;
+          const currentJournalId = document.getElementById("journalID").value;
+          
+          const inputStartMinutes = convertTimeToMinutes(startTime);
+          const inputEndMinutes = convertTimeToMinutes(endTime);
+          
+          const sameDateJournals = dailyjournalAll.filter(journal => journal.날짜 == journalDate && journal.회원번호 === memberNumber);
+          
+          for (const journal of sameDateJournals) {
+              if (currentJournalId && journal.일지_id === currentJournalId) {
+                  continue;
+              }
+              
+              const journalStartTime = String(journal.시작시간 || '').padStart(4, '0');
+              const journalEndTime = String(journal.종료시간 || '').padStart(4, '0');
+              const journalStartMinutes = convertTimeToMinutes(journalStartTime);
+              const journalEndMinutes = convertTimeToMinutes(journalEndTime);
+              
+              if ((inputStartMinutes >= journalStartMinutes && inputStartMinutes < journalEndMinutes) ||
+                  (inputEndMinutes > journalStartMinutes && inputEndMinutes <= journalEndMinutes) ||
+                  (inputStartMinutes <= journalStartMinutes && inputEndMinutes >= journalEndMinutes)) {
+                  
+                  const journalStartTimeFormatted = formatTime(journalStartTime);
+                  const journalEndTimeFormatted = formatTime(journalEndTime);
+                  const memberName = journal.회원명;
+                  
+                  showCustomAlert(`${memberName}(${memberNumber}) 회원님의 기존 일지 (${journalStartTimeFormatted}~${journalEndTimeFormatted})와 시간이 중복됩니다.`);
+                  return false;
+              }
+          }
+          
+          return true;
+      }
+        
+      function validateJournalInputs() {
+          const requiredFields = [
+            { id: "journalDate", name: "날짜" },
+            { id: "journalStartTime", name: "시작시간" },
+            { id: "journalEndTime", name: "종료시간" },
+            { id: "journalActivityName", name: "활동명" },
+            { id: "journalCode", name: "소분류코드" },
+            { id: "journalManager", name: "직원명" },
+            { id: "journalMemberNumber", name: "회원번호" },
+            { id: "journalName", name: "회원명" },
+            { id: "journalObservations", name: "관찰사항" }
+          ];
+
+          for (const field of requiredFields) {
+            const value = document.getElementById(field.id).value.trim();
+            if (!value) {
+              showCustomAlert(`${field.name}을(를) 입력해주세요.`);
+              document.getElementById(field.id).focus();
+            return false;
+          }
+        }
+
+          const timeRegex = /^([0-1][0-9]|2[0-3])[0-5][0-9]$/;
+          let startTime = document.getElementById("journalStartTime").value.padStart(4, '0');
+          let endTime = document.getElementById("journalEndTime").value.padStart(4, '0');
+
+          if (!timeRegex.test(startTime)) {
+            showCustomAlert("시작시간을 올바른 형식(HHMM)으로 입력해주세요.\n예: 0900, 1330");
+            document.getElementById("journalStartTime").focus();
+            return false;
+          }
+
+          if (!timeRegex.test(endTime)) {
+            showCustomAlert("종료시간을 올바른 형식(HHMM)으로 입력해주세요.\n예: 0900, 1330");
+            document.getElementById("journalEndTime").focus();
+            return false;
+          }
+
+          if (parseInt(startTime) >= parseInt(endTime)) {
+            showCustomAlert("종료시간은 시작시간보다 늦어야 합니다.");
+            document.getElementById("journalEndTime").focus();
+            return false;
+          }
+
+          const scoreFields = [
+            { id: "journalParticipation", name: "참여도" },
+            { id: "journalPerformance", name: "수행도" },
+            { id: "journalSatisfaction", name: "만족도" }
+          ];
+
+          for (const field of scoreFields) {
+            const value = parseInt(document.getElementById(field.id).value);
+            if (isNaN(value) || value < 0 || value > 5) {
+              showCustomAlert(`${field.name}는 0에서 5 사이의 값이어야 합니다.`);
+              document.getElementById(field.id).focus();
+              return false;
+            }
+          }
+          
+          if (!checkRightTimeAndMemberNum()) {
+            return false;
+          }
+
+        return true;
+      }
+       
+
+      
+
+      
+
+
+
+
+      function showMemberModal() {
+          const modal = document.getElementById('memberSelectModal');
+          const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+          
+          modal.style.display = "block";
+          
+          updateMemberList(selectedDate);
+          
+          document.getElementById('memberSearchBox').focus();
+      }
+
+      function updateMemberList(selectedDate) {
+          const tableBody = document.getElementById('member-list-body');
+          const searchText = document.getElementById('memberSearchBox').value.toLowerCase();
+          tableBody.innerHTML = '';
+          
+          const filteredMembers = memberall.filter(member => {
+              const admissionDate = member.입소일 || '';
+              const dischargeDate = member.퇴소일 || '99991231';
+              const memberName = (member.회원명 || '').toLowerCase();
+              const memberNumber = (member.회원번호 || '').toLowerCase();
+              
+              if (memberNumber === '상담회원') {
+                  return false;
+              }
+              
+              const matchesSearch = memberName.includes(searchText) || 
+                                  memberNumber.includes(searchText);
+              
+              const meetsDateCriteria = (admissionDate === '' || selectedDate >= admissionDate) && 
+                                      (dischargeDate === '' || dischargeDate === '99991231' || selectedDate <= dischargeDate);
+              
+              return matchesSearch && meetsDateCriteria;
+          });
+          
+          filteredMembers.forEach(member => {
+              const row = document.createElement('tr');
+              
+              const memberNumber = document.createElement('td');
+              memberNumber.textContent = member.회원번호 || '';
+              row.appendChild(memberNumber);
+              
+              const memberName = document.createElement('td');
+              memberName.textContent = member.회원명 || '';
+              row.appendChild(memberName);
+              
+              row.addEventListener('dblclick', () => {
+                  document.getElementById('journalMemberNumber').value = member.회원번호 || '';
+                  document.getElementById('journalName').value = member.회원명 || '';
+                  closeMemberModal();
+              });
+              
+              tableBody.appendChild(row);
+          });
+      }
+
+      function closeMemberModal() {
+          document.getElementById('memberSelectModal').style.display = "none";
+      }
+
+      let journalSortColumn = -1;
+      let journalSortDirection = 'asc';
+      let planSortColumn = -1;
+      let planSortDirection = 'asc';
+
+      function sortJournalTable(columnIndex) {
+          const table = document.getElementById('daily-journal-table');
+          const tbody = table.querySelector('tbody');
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+
+          if (journalSortColumn === columnIndex) {
+              journalSortDirection = journalSortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+              journalSortColumn = columnIndex;
+              journalSortDirection = 'asc';
+          }
+
+          rows.sort((a, b) => {
+              const aValue = a.cells[columnIndex].textContent;
+              const bValue = b.cells[columnIndex].textContent;
+
+              if (!isNaN(aValue) && !isNaN(bValue)) {
+                  return journalSortDirection === 'asc' 
+                      ? Number(aValue) - Number(bValue)
+                      : Number(bValue) - Number(aValue);
+              }
+
+              return journalSortDirection === 'asc'
+                  ? aValue.localeCompare(bValue)
+                  : bValue.localeCompare(aValue);
+          });
+
+          rows.forEach(row => tbody.appendChild(row));
+      }
+
+      function sortPlanSummaryTable(columnIndex) {
+          const table = document.getElementById('daily-plan-summary-table');
+          const tbody = table.querySelector('tbody');
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+
+          if (planSortColumn === columnIndex) {
+              planSortDirection = planSortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+              planSortColumn = columnIndex;
+              planSortDirection = 'asc';
+          }
+
+          rows.sort((a, b) => {
+              const aValue = a.cells[columnIndex].textContent;
+              const bValue = b.cells[columnIndex].textContent;
+
+              if (!isNaN(aValue) && !isNaN(bValue)) {
+                  return planSortDirection === 'asc' 
+                      ? Number(aValue) - Number(bValue)
+                      : Number(bValue) - Number(aValue);
+              }
+
+              return planSortDirection === 'asc'
+                  ? aValue.localeCompare(bValue)
+                  : bValue.localeCompare(aValue);
+          });
+
+          rows.forEach(row => tbody.appendChild(row));
+      }
+
+      function filterJournalByEmployee() {
+          const employeeFilter = document.getElementById('employeeFilter').value.trim();
+          
+          const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+          if (!selectedDate) {
+              return;
+          }
+          
+          const tableBody = document.getElementById('journal-table-body');
+          tableBody.innerHTML = '';
+          
+          let filteredJournals = dailyjournalAll;
+          
+          if (employeeFilter !== '') {
+              filteredJournals = filteredJournals.filter((journal) => {
+                  return String(journal.직원번호 || '').includes(employeeFilter) || 
+                         String(journal.직원명 || '').toLowerCase().includes(employeeFilter.toLowerCase());
+              });
+          }
+          
+          if (filteredJournals.length === 0) {
+              const row = document.createElement('tr');
+              const cell = document.createElement('td');
+              cell.colSpan = 12;
+              cell.textContent = employeeFilter ? 
+                                '해당 직원의 일지 데이터가 없습니다.' : 
+                                '해당 날짜의 일지 데이터가 없습니다.';
+              cell.style.textAlign = 'center';
+              cell.style.padding = '10px';
+              row.appendChild(cell);
+              tableBody.appendChild(row);
+              return;
+          }
+          
+          filteredJournals.sort((a, b) => {
+              const startTimeA = String(a.시작시간 || '').padStart(4, '0');
+              const startTimeB = String(b.시작시간 || '').padStart(4, '0');
+              const timeA = timeToNumber(startTimeA);
+              const timeB = timeToNumber(startTimeB);
+              const timeCompare = timeA - timeB;
+              
+              if (timeCompare === 0) {
+                  const managerA = String(a.직원명 || '');
+                  const managerB = String(b.직원명 || '');
+                  return managerA.localeCompare(managerB);
+              }
+              
+              return timeCompare;
+          });
+          
+          filteredJournals.forEach(journal => {
+              const row = document.createElement('tr');
+              
+              const columns = ['날짜', '시작시간', '종료시간', '직원명', '활동명', '코드', '회원번호', '회원명', '참여도', '수행도', '만족도', '관찰사항'];
+              
+              columns.forEach(key => {
+                  const cell = document.createElement('td');
+                  if (key === '날짜') {
+                      cell.textContent = journal[key] || '';
+                  } else if (key === '시작시간' || key === '종료시간') {
+                      cell.textContent = String(journal[key] || '').padStart(4, '0');
+                  } else {
+                      cell.textContent = journal[key] || '';
+                  }
+                  row.appendChild(cell);
+              });
+              
+              row.addEventListener('dblclick', () => {
+                  resetAllFields();
+                  document.getElementById('journalID').value = journal.일지_id || '';
+                  document.getElementById('journalDate').value = journal.날짜 || '';
+                  document.getElementById('journalStartTime').value = String(journal.시작시간 || '').padStart(4, '0');
+                  document.getElementById('journalEndTime').value = String(journal.종료시간 || '').padStart(4, '0');
+                  document.getElementById('journalEmployeeNumber').value = journal.직원번호 || '';
+                  document.getElementById('journalManager').value = journal.직원명 || '';
+                  document.getElementById('journalActivityName').value = journal.활동명 || '';
+                  document.getElementById('journalCode').value = journal.코드 || '';
+                  document.getElementById('journalMemberNumber').value = journal.회원번호 || '';
+                  document.getElementById('journalName').value = journal.회원명 || '';
+                  document.getElementById('journalParticipation').value = journal.참여도 || '5';
+                  document.getElementById('journalPerformance').value = journal.수행도 || '5';
+                  document.getElementById('journalSatisfaction').value = journal.만족도 || '5';
+                  document.getElementById('journalObservations').value = journal.관찰사항 || '';
+                  
+                  updateButtonStates(false, true, true);
+              });
+              
+              tableBody.appendChild(row);
+          });
+      }
+      
+      function filterJournalAndPlanByEmployee() {
+          filterJournalByEmployee();
+          
+          filterPlanByEmployee();
+      }
+
+      document.getElementById('employeeFilter').addEventListener('keyup', filterJournalAndPlanByEmployee);
+      
+      function filterPlanByEmployee() {
+          const employeeFilter = document.getElementById('employeeFilter').value.trim();
+          
+          const selectedDate = changeDate(document.getElementById("datePickerPage2").value);
+          if (!selectedDate) {
+              return;
+          }
+          
+          const tableBody = document.getElementById('plan-table-body');
+          tableBody.innerHTML = '';
+          
+          let filteredPlans = dailyPlanAll;
+          
+          if (employeeFilter !== '') {
+              filteredPlans = filteredPlans.filter((plan) => {
+                  return String(plan.직원번호 || '').includes(employeeFilter) || 
+                         String(plan.직원명 || '').toLowerCase().includes(employeeFilter.toLowerCase());
+              });
+          }
+          
+          if (filteredPlans.length === 0) {
+              const row = document.createElement('tr');
+              const cell = document.createElement('td');
+              cell.colSpan = 6;
+              cell.textContent = employeeFilter ? 
+                                 '해당 직원의 계획 데이터가 없습니다.' : 
+                                 '해당 날짜의 계획 데이터가 없습니다.';
+              cell.style.textAlign = 'center';
+              cell.style.padding = '10px';
+              row.appendChild(cell);
+              tableBody.appendChild(row);
+              return;
+          }
+          
+          filteredPlans.sort((a, b) => {
+              const startTimeA = String(a.시작시간 || '').padStart(4, '0');
+              const startTimeB = String(b.시작시간 || '').padStart(4, '0');
+              const timeA = timeToNumber(startTimeA);
+              const timeB = timeToNumber(startTimeB);
+              const timeCompare = timeA - timeB;
+              
+              if (timeCompare === 0) {
+                  const managerA = String(a.직원명 || '');
+                  const managerB = String(b.직원명 || '');
+                  return managerA.localeCompare(managerB);
+              }
+              
+              return timeCompare;
+          });
+          
+          filteredPlans.forEach(plan => {
+              const row = document.createElement('tr');
+              
+              const columns = ['날짜', '시작시간', '종료시간', '직원명', '활동명', '생활영역'];
+              
+              columns.forEach(key => {
+                  const cell = document.createElement('td');
+                  if (key === '날짜') {
+                      cell.textContent = plan[key] || '';
+                  } else if (key === '시작시간' || key === '종료시간') {
+                      cell.textContent = String(plan[key] || '').padStart(4, '0');
+                  } else {
+                      cell.textContent = plan[key] || '';
+                  }
+                  row.appendChild(cell);
+              });
+              
+              row.addEventListener('dblclick', () => {
+                  resetAllFields();
+                  document.getElementById('journalDate').value = plan.날짜 || '';
+                  document.getElementById('journalStartTime').value = String(plan.시작시간 || '').padStart(4, '0');
+                  document.getElementById('journalEndTime').value = String(plan.종료시간 || '').padStart(4, '0');
+                  document.getElementById('journalEmployeeNumber').value = plan.직원번호 || '';
+                  document.getElementById('journalManager').value = plan.직원명 || '';
+                  document.getElementById('journalActivityName').value = plan.활동명 || '';
+                  document.getElementById('journalCode').value = plan.생활영역 || '';
+              });
+              
+              tableBody.appendChild(row);
+          });
+      }
+    </script>
+  </body>
+</html>
